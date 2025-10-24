@@ -1,0 +1,45 @@
+version: '3'
+
+services:
+  mcp-inspector:
+    container_name: inspector
+    build:
+      context: ./mcpinspector
+      dockerfile: Dockerfile
+    ports:
+      - "6274:6274"  # Client UI
+      - "6277:6277"  # MCP proxy server
+    networks:
+      - services-net
+    environment:
+      - HOST=0.0.0.0
+    # You can mount your MCP server code here if needed
+    volumes:
+       - ./mcpinspector/mcp/server:/app/server
+    # Override the default command if needed
+    # command: node /app/server/build/index.js
+
+  mcp-nodejs-server:
+    container_name: nodejs-server
+    env_file:
+      - ./mcp-nodejs-server/.env
+    build:
+      context: ./mcp-nodejs-server
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    networks:
+      - services-net
+    volumes:
+      - ./mcp-nodejs-server/src:/app/src                # Monte uniquement le dossier src (code source)
+      - /app/node_modules            # Volume anonyme pour node_modules dans le conteneur
+      - ./mcp-nodejs-server/tsconfig.json:/app/tsconfig.json:ro  # Monter tsconfig pour dev TypeScript (en lecture seule)
+      - ./mcp-nodejs-server/package.json:/app/package.json:ro    # Monter package.json seul, si vraiment nécessaire (parfois pas utile)
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+    command: npx nodemon --watch src --ext ts,json --exec ts-node src/index.ts
+
+networks:
+  services-net:
+    driver: bridge
