@@ -1,5 +1,6 @@
 # Variables
 COMPOSE_FILE=docker-compose.yml
+APP_NAME=mcp-nodejs-server
 
 .PHONY: build dev start stop restart logs clean test container test-coverage clean-dist
 

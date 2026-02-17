@@ -76,9 +76,39 @@ const getServer = () => {
                 content: [
                     {
                         type: 'text',
-                        text: `Started sending periodic notifications every ${interval}ms`
+                        text: `Started sending periodic notifi every ${interval}ms  ${counter}    `
                     }
                 ]
+            };
+        }
+    );
+
+    const createGreetingMessages = (name: string): GetPromptResult => ({
+        messages: [
+            {
+                role: 'user',
+                content: {
+                    type: 'text',
+                    text: `Please greet ${name} in a friendly manner.`
+                }
+            }
+        ]
+    });
+
+    // TOOL greet
+    server.tool(
+        'greet',
+        'Generate a friendly greeting for the given name',
+        { name: z.string().describe('Name to greet') },
+        async ({ name }): Promise<CallToolResult> => {
+            console.log('tool greet:', name);
+            
+            // ✅ Réponse finale DIRECTE (pas prompt)
+            return {
+            content: [{ 
+                type: 'text', 
+                text: `Bonjour ${name} ! Ravi de vous rencontrer.`  // Ou appelez un LLM réel
+            }]
             };
         }
     );
