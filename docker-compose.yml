@@ -73,6 +73,7 @@ services:
 
   proxy:
     container_name: proxy
+    hostname: proxy-mcp
     build:
       context: ./proxy
       dockerfile: Dockerfile

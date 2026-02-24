@@ -38,3 +38,17 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+
+Fonctionnalités incluses :
+✅ Interface moderne et responsive avec design gradient
+✅ Chat en temps réel avec scroll automatique
+✅ Communication parfaite avec votre proxy (localhost:3001/chat)
+✅ Gestion des états (loading, erreurs, focus auto)
+✅ Messages persistants (historique complet)
+✅ Support des tool calls (affiche ✅ greet: ...)
+✅ Messages d'erreur élégants
+✅ Placeholder intelligent pour guider l'utilisateur
+✅ Bouton send animé avec états disabled
+✅ Scrollbar customisée
+
+La page est prête à l'emploi ! Testez avec "bonjour" pour voir votre système MCP + Ollama en action ✅

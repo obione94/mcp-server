@@ -3,13 +3,12 @@ import type { Request, Response } from 'express';
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { CallToolResultSchema, GetPromptResultSchema, ReadResourceResultSchema } from '@modelcontextprotocol/sdk/types.js';
+
 import { z } from "zod"
 import cors from 'cors';
 
-type CallToolResult = z.infer<typeof CallToolResultSchema>;
-type GetPromptResult = z.infer<typeof GetPromptResultSchema>;
-type ReadResourceResult = z.infer<typeof ReadResourceResultSchema>;
 
+type CallToolResult = z.infer<typeof CallToolResultSchema>;
 
 const getServer = () => {
     // Create an MCP server with implementation details
@@ -21,111 +20,54 @@ const getServer = () => {
         { capabilities: { logging: {} } }
     );
 
-    // Register a simple prompt
-    server.prompt(
-        'greeting-template',
-        'A simple greeting prompt template',
-        {
-            name: z.string().describe('Name to include in greeting')
-        },
-        async ({ name }): Promise<GetPromptResult> => {
-            return {
-                messages: [
-                    {
-                        role: 'user',
-                        content: {
-                            type: 'text',
-                            text: `Please greet ${name} in a friendly manner.`
-                        }
-                    }
-                ]
-            };
-        }
-    );
-
-    // Register a tool specifically for testing resumability
     server.tool(
-        'start-notification-stream',
-        'Starts sending periodic notifications for testing resumability',
-        {
-            interval: z.number().describe('Interval in milliseconds between notifications').default(100),
-            count: z.number().describe('Number of notifications to send (0 for 100)').default(10)
-        },
-        async ({ interval, count }, extra): Promise<CallToolResult> => {
-            const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-            let counter = 0;
+        'getEmployeeCountByCompanyName',
+        "Récupère le nombre d'employés par nom société",
+        { companyName: z.string().describe('Nom de la société') },
+        async ({ companyName }): Promise<CallToolResult> => {
+            // Mock: dans la vraie vie tu appellerais ta DB ou une API ici
+            const fakeDb: Record<string, number> = {
+                "google": 180000,
+                "openAI": 1000,
+                "greenflex": 6,
+                "totorame": 10,                
+                "tutu": 10,
+            };
 
-            while (count === 0 || counter < count) {
-                counter++;
-                try {
-                    await server.sendLoggingMessage(
-                        {
-                            level: 'info',
-                            data: `Periodic notification #${counter} at ${new Date().toISOString()}`
-                        },
-                        extra.sessionId
-                    );
-                } catch (error) {
-                    console.error('Error sending notification:', error);
-                }
-                // Wait for the specified interval
-                await sleep(interval);
-            }
+            const count = fakeDb[companyName.toLowerCase()] ?? 0;
 
             return {
                 content: [
                     {
-                        type: 'text',
-                        text: `Started sending periodic notifi every ${interval}ms  ${counter}    `
-                    }
-                ]
+                        type: "text",
+                        text: `${count} employé(s).`,
+                    },
+                ],
             };
         }
     );
-
-    const createGreetingMessages = (name: string): GetPromptResult => ({
-        messages: [
-            {
-                role: 'user',
-                content: {
-                    type: 'text',
-                    text: `Please greet ${name} in a friendly manner.`
-                }
-            }
-        ]
-    });
-
-    // TOOL greet
+    
     server.tool(
-        'greet',
-        'Generate a friendly greeting for the given name',
-        { name: z.string().describe('Name to greet') },
-        async ({ name }): Promise<CallToolResult> => {
-            console.log('tool greet:', name);
-            
-            // ✅ Réponse finale DIRECTE (pas prompt)
-            return {
-            content: [{ 
-                type: 'text', 
-                text: `Bonjour ${name} ! Ravi de vous rencontrer.`  // Ou appelez un LLM réel
-            }]
+        'getResidenceCountByClientName',
+        "Récupère le nombre de résidence par nom client",
+        { clientName: z.string().describe("Nom du client") },
+        async ({ clientName }): Promise<CallToolResult> => {
+            // Mock: dans la vraie vie tu appellerais ta DB ou une API ici
+            const fakeDb: Record<string, number> = {
+                "toto": 180000,
+                "titi": 1000,
+                "tutu": 6,
             };
-        }
-    );
 
-    // Create a simple resource at a fixed URI
-    server.resource(
-        'greeting-resource',
-        'https://example.com/greetings/default',
-        { mimeType: 'text/plain' },
-        async (): Promise<ReadResourceResult> => {
+            const count = fakeDb[clientName.toLowerCase()] ?? 0;
+
             return {
-                contents: [
+                content: [
                     {
-                        uri: 'https://example.com/greetings/default',
-                        text: 'Hello, world!'
-                    }
-                ]
+                        type: "text",
+                        text: `${count} résidence(s).`,
+                    },
+                ],
             };
         }
     );

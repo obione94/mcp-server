@@ -24,7 +24,7 @@ stop:
 restart: stop start
 
 # Afficher les logs des deux services
-logs:
+logs proxy:
 	docker logs -f $$(docker-compose ps -q $(APP_NAME))
 
 # Nettoyer les images (optionnel)
