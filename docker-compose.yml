@@ -51,26 +51,6 @@ services:
       - OLLAMA_HOST=0.0.0.0:11434
     restart: unless-stopped
 
-  open-webui:
-    image: ghcr.io/open-webui/open-webui:main
-    container_name: open-webui
-    depends_on:
-      - ollama
-      - mcp-nodejs-server  # ← AJOUTÉ : attend que nodejs-server soit prêt
-    ports:
-      - "3003:8080"
-    environment:
-      - OLLAMA_BASE_URL=http://ollama:11434
-      - WEBUI_SECRET_KEY=changeme
-    volumes:
-      - open_webui_data:/app/backend/data
-    extra_hosts:
-      - host.docker.internal:host-gateway
-      - "nodejs-server:172.21.0.5"  # ← FIX : IP fixe de ton nodejs-server
-    networks:
-      - services-net  # ← AJOUTÉ : même réseau que nodejs-server
-    restart: unless-stopped
-
   proxy:
     container_name: proxy
     hostname: proxy-mcp
