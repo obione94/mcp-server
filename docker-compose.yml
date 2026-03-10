@@ -1,99 +1,137 @@
-version: '3'
+networks:
+  services-net:
+
+volumes:
+  ollama_storage:
+
+x-ollama: &service-ollama
+  image: ollama/ollama:latest
+  container_name: ollama
+  networks: ['services-net']
+  restart: unless-stopped
+  ports:
+    - 11434:11434
+  volumes:
+    - ollama_storage:/root/.ollama
+  healthcheck:
+    test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+    interval: 5s
+    timeout: 3s
+    retries: 10
+    start_period: 10s
+
+x-init-ollama: &init-ollama
+  image: ollama/ollama:latest
+  networks: ['services-net']
+  container_name: ollama-pull-llama
+  volumes:
+    - ollama_storage:/root/.ollama
+  entrypoint: /bin/sh
+  environment:
+    - OLLAMA_HOST=ollama:11434
+  command:
+    - "-c"
+    - "sleep 3; ollama pull llama3.1:8b"
 
 services:
   mcp-inspector:
-    container_name: inspector
+    container_name: mcp-inspector
     build:
-      context: ./mcpinspector
+      context: ./mcp-inspector
       dockerfile: Dockerfile
     ports:
-      - "6274:6274"  # Client UI
-      - "6277:6277"  # MCP proxy server
+      - "6274" # Client UI
+      - "6277" # MCP proxy server
     networks:
       - services-net
     environment:
       - HOST=0.0.0.0
       - DANGEROUSLY_OMIT_AUTH=true
-    volumes:
-       - ./mcpinspector/mcp/server:/app/server
 
-  mcp-nodejs-server:
-    container_name: nodejs-server
-    env_file:
-      - ./mcp-nodejs-server/.env
+  mcp-server:
+    container_name: mcp-server
+    hostname: mcp-server
+    env_file: .env
     build:
-      context: ./mcp-nodejs-server
+      context: ./mcp-server
       dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
+    ports: ["${MCP_PORT:-3000}:3000"]
     networks:
       - services-net
     volumes:
-      - ./mcp-nodejs-server/src:/app/src
-      - /app/node_modules
-      - ./mcp-nodejs-server/tsconfig.json:/app/tsconfig.json:ro
-      - ./mcp-nodejs-server/package.json:/app/package.json:ro
-    environment:
-      - NODE_ENV=development
-      - PORT=3000
+      - ./mcp-server:/app
     command: npx nodemon --watch src --ext ts,json --exec ts-node src/index.ts
 
-  ollama:
-    image: ollama/ollama:latest
-    container_name: ollama
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    networks:
-      - services-net
-    environment:
-      - OLLAMA_HOST=0.0.0.0:11434
-    restart: unless-stopped
-
-  proxy:
-    container_name: proxy
+  mcp-proxy-server:
+    container_name: mcp-proxy-server
     hostname: proxy-mcp
     build:
-      context: ./proxy
+      context: ./mcp-proxy-server
       dockerfile: Dockerfile
-    ports:
-      - "3001:3001"
+    ports: ["${PROXY_PORT:-3001}:3001"]
     env_file: .env
     volumes:
-      - ./proxy/src:/app/src
-      - /app/node_modules
-      - ./proxy/tsconfig.json:/app/tsconfig.json:ro
-      - ./proxy/package.json:/app/package.json:ro
+      - ./mcp-proxy-server:/app
     networks:
       - services-net
     depends_on:
-      - ollama
-      - mcp-nodejs-server
+      - mcp-server
     command: npx nodemon --watch src --ext ts,json --exec ts-node src/index.ts
 
-  frontend:
-    container_name: frontend-dev
-    build: ./frontend
-    ports:
-      - "3002:3000"
+  next-front-end:
+    container_name: next-front-end
+    env_file: .env
+    build: ./next-front-end
+    ports: ["${FRONTEND_PORT:-3002}:3000"]
     volumes:
-      - ./frontend:/app  # Live code sync
-      - /app/node_modules  # Ignore node_modules
+      - ./next-front-end:/app # Live code sync
     environment:
       - NODE_ENV=development
-      - WATCHPACK_POLLING=true  # File watching
-    command: npm run dev  # Dev server
+      - WATCHPACK_POLLING=true # File watching
+    command: npm run dev # Dev server
     networks:
       - services-net
     depends_on:
-      - proxy
-      - ollama
+      - mcp-proxy-server
 
-networks:
-  services-net:
-    driver: bridge
+  ollama-cpu:
+    profiles: ["cpu"]
+    <<: *service-ollama
 
-volumes:
-  ollama_data:
-  open_webui_data:
+  ollama-gpu:
+    profiles: ["gpu-nvidia"]
+    <<: *service-ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  ollama-gpu-amd:
+    profiles: ["gpu-amd"]
+    <<: *service-ollama
+    image: ollama/ollama:rocm
+    devices:
+      - "/dev/kfd"
+      - "/dev/dri"
+
+  ollama-pull-llama-cpu:
+    profiles: ["cpu"]
+    <<: *init-ollama
+    depends_on:
+      - ollama-cpu
+
+  ollama-pull-llama-gpu:
+    profiles: ["gpu-nvidia"]
+    <<: *init-ollama
+    depends_on:
+      - ollama-gpu
+
+  ollama-pull-llama-gpu-amd:
+    profiles: [gpu-amd]
+    <<: *init-ollama
+    image: ollama/ollama:rocm
+    depends_on:
+     - ollama-gpu-amd
