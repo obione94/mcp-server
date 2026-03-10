@@ -71,6 +71,7 @@ export default function Home() {
     setIsLoading(true);
 
     try {
+      /**front localhost */
       const response = await fetch('http://localhost:3001/chatmoi', {
         method: 'POST',
         headers: {
